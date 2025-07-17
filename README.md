@@ -4,7 +4,9 @@ La maggior parte del contenuto di queste librerie è stato scritto da me, per ci
 
 ### Le librerie sono divise per esercizio (1, 2, 3 o 4)  
 Dovrebbero contenere tutto ciò che è necessario a passare con tranquillità l'esame (chiaramente bisogna imparare ad usarle😄).  
-**Si consiglia di integrare con il virtuale creato dal professor Paolo Ciaccia ed, eventualmente, con la pagina notion citata più volte nelle librerie.**  
-Non ho incluso tutto il materiale a mia disposizione ma solo quello necessario a passare l'esame con ottimi risultati, e usato da me nella preparazione della prova, se dovesse mancare qualcosa, potete contattarmi o mandare un issue, grazie.  
+**Si consiglia di integrare con il virtuale creato dal professor [**Paolo Ciaccia**](https://www.unibo.it/sitoweb/paolo.ciaccia).  ed, eventualmente, con la pagina notion citata più volte nelle librerie.**  
+Non ho incluso tutto il materiale a mia disposizione per evitare librerie confusionarie, nonostante questo dovrebbe esserci tutto ciò che serve a prepararsi al meglio per questo esame, in caso dovesse mancare qualcosa, contattatemi o mandatemi un issue, grazie.  
+
+Le prove che ho scaricato e inserito nella cartella prove_d'esame_passate sono tante ma non tutte, se ne possono trovare altre [**sul sito personale del professor Paolo Ciaccia**](https://www-db.deis.unibo.it/~pciaccia/).
 
 ## 📚Buono studio!
