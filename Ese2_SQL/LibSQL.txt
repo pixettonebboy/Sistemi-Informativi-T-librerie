@@ -1,0 +1,300 @@
+LIBRERIE DI SISTEMI INFORMATIVI-T
+Achille Pisani
+
+
+FONTI:
+	La maggior parte delle informazioni è stata presa da questa pagina notion con teoria e pratica trovata sui vari gruppi:
+	https://www.notion.so/Sistemi-Informativi-aa2a5c0c17224653a4b1f7a3e1187b9b
+
+
+------------------------------------------------FUNZIONI E COMANDI BASE:------------------------------------------------
+
+DROP TABLE *nomeTabella*;
+
+
+CREATE TABLE *nomeTabella*(
+	*nomeAttributo*  *tipo*  *vincoli* ,
+	...
+);
+
+
+------------------------------------------------TIPI DI ATTRIBUTI:------------------------------------------------
+  - integer
+  - char(*num*)          			OVVERO #num caratteri salvati in memoria
+  - varchar					IN AUTOMATICO max = 8000
+  - varchar(*num*)       			MASSIMO #num char salvati in memoria
+  - dec( *cifre intere* , *cifre decimali*)
+  - date
+  - time
+  - datetime
+  - year
+
+
+------------------------------------------------TIPI DI VINCOLI:------------------------------------------------
+
+  A FIANCO DEGLI ATTRIBUTI
+
+  - NOT NULL							NON PUO ESSERE NULLO, GLI SERVE UN VALORE
+  - PRIMARY KEY							SEMPRE DOPO NOT NULL, chiave primaria da sola
+  - FOREIGN KEY REFERENCES *tabella*(*attrTabella*)
+  - UNIQUE							VALORE UNICO IN TUTTA LA TABELLA OPPURE NULL
+  - CHECK(*controllo*)						FA UN CONTROLLO SU CIO CHE CI VIENE INSERITO (anche a fondo tabella)
+  - DEFAULT *valore*						SE NON INSERIAMO UN VALORE, ATTRIBUTO PRENDE QUELLO DI DEFAULT
+
+  FONDO DELLA CREAZIONE TABELLA:
+  
+  - CONSTRAINT							NOME PER IL VINCOLO
+  - PRIMARY KEY (*val1*, *val2*, ...)				SUPERCHIAVE, COMPOSTA DA PIU ATTRIBUTI
+  - FOREIGN KEY (*attr*) REFERENCES *tabella*(*attrTabella*)    CHIAVE ESTERNA, CON ATTRIBUTO DI UN'ALTRA TABELLA
+
+  esempio
+  CREATE TABLE Auto(
+	Targa char(7) NOT NULL PRIMARY KEY,
+	Modello varchar(30) NOT NULL,
+	CodR varchar(30) NOT NULL,
+	PrezzoVendita DEC(8,2) NOT NULL,
+	Km integer NOT NULL,
+	Anno integer NOT NULL,
+	Venduta char(2),
+	
+	CONSTRAINT ControlloVendita CHECK (Venduta='SI'),
+	
+	FOREIGN KEY (Modello) REFERENCES Modelli(Modello),
+	FOREIGN KEY (CodR) REFERENCES Rivenditori(CodR)
+  );
+
+
+INSERT INTO *tabella* VALUES (*val1*, *val2*, ... , *valN*);
+INSERT INTO *tabella* (*val1*, *val2*) VALUES (*val1*, *val2*);   
+
+
+------------------------------------------------CONTROLLO TIPO GERARCHIE------------------------------------------------
+
+CREATE OR REPLACE TRIGGER XXXXX
+BEFORE INSERT ON __TAB_CON_FK__
+REFERENCING NEW AS N
+FOR EACH ROW
+WHEN( EXISTS ( 
+    SELECT *
+    FROM __TAB1__
+    WHERE N.__FK__ = TAB1.__KEY__
+    AND __TAB1__.TIPO = 1
+) ) SIGNAL SQLSTATE '70001' ('La tupla referenzia una tupla che non appartiene a __TAB_FIGLIA__!');
+
+
+
+------------------------------------------------SOTTRAZIONE------------------------------------------------
+
+query 1
+EXCEPT
+query 2
+
+
+------------------------------------------------DATA ATTUALE
+CURRENT TIMESTAMP
+
+------------------------------------------------UTENTE ATTUALE
+CURRENT USER
+
+
+------------------------------------------------AGGREGAZIONE------------------------------------------------
+
+Servono ad ottenere dal DB informazioni di sintesi che caratterizzano “gruppi” di tuple
+ES: il numero di esami del corso 913, la media dei voti dello studente 29323, la media dei voti per tutti i corsi del primo anno ...
+
+
+------------------------------------------------FUNZIONI AGGREGATE------------------------------------------------
+
+Generano un risultato dalla tabella scelta e filtrata con FROM e WHERE
+
+>> OPERATORI
+  
+  - COUNT(* / *attributo*)     	conta le tuple (o se datogli un attributo, tutte le righe con quel valore non nullo)
+  - MIN(*attributo*)      	restituisce il minimo
+  - MAX(*attributo*)		restituisce il massimo
+  - SUM(*attributo*)		restituisce la somma
+  - AVG(*attributo*)		restituisce la media
+  - DISTINCT 		 	viene messo prima dell'attributo, evita che l'aggregatore prenda valori già visti
+
+
+  es. somma stipendi degli impiegati nella sede S01
+  SELECT SUM(Stipendio) AS Somma
+  FROM Imp
+  WHERE Sede = ‘S01’
+
+  es. somma tutti gli stipendi diversi degli impiegati nella sede S01
+  SELECT SUM(DISTINCT Stipendio)
+  FROM Imp
+  WHERE Sede = ‘S01’
+
+
+  Alcuni operatori necessitano di un CASTING (anche implicito) per rappresentare il giusto tipo di valore
+  es. avg è di tipo decimal ma stipendio nella tabella era integer
+  SELECT AVG(Stipendio/1.0) AS AvgStip
+  FROM Imp
+
+
+
+------------------------------------------------GROUP BY------------------------------------------------
+
+Quando uso un aggregatore, nella select potrò mettere solo altri aggregatori, altrimenti il mio sistema non saprebbe più su che base raggruppare.
+Altrimenti, posso scegliere io i criteri tramite GROUP BY
+
+  es.
+  SELECT Sede, COUNT(*) AS NumProg
+  FROM Imp
+  WHERE Ruolo = ‘Programmatore’
+  GROUP BY Sede
+
+  Tutti gli attributi usati per raggruppare devono comparire nella SELECT
+
+
+------------------------------------------------HAVING------------------------------------------------
+
+Spesso è utile eseguire altre proiezioni dopo aver raggruppato, ma ormai la SELECT è già stata eseguita prima della GROUP BY.
+E' stato quindi implementato HAVING, un ulteriore batteria di controlli eseguita come ultima fase della query:
+
+  es. il numero di impiegati di ogni sede che ha lo stipendio max <= 2000
+  SELECT Sede, COUNT(*) AS NumImp
+  FROM Imp
+  GROUP BY Sede
+  HAVING MAX(Stipendio) <= 2000
+
+
+
+
+
+
+------------------------------------------------SUBQUERY------------------------------------------------
+
+In una query, eseguo confronto tra dati della tabella e il risultato di un'altra query annidata
+
+
+------------------------------------------------SUBQUERY SCALARI------------------------------------------------
+
+La subquery ritorna un singolo valore
+
+  es. impiegati con stipendio minimo
+  
+  SELECT CodImp
+  FROM Imp
+  WHERE Stipendio = ( SELECT MIN(Stipendio) FROM Imp )
+
+
+
+
+------------------------------------------------SUBQUERY LISTA------------------------------------------------
+
+Restituiscono una colonna, una lista di valori
+
+>> OPERATORI
+
+  - <op> corrisponde a = , <= , >= ...
+
+  - <op> ANY / IN    (la relazione <op> vale per almeno uno dei valori)
+  - <op> ALL         (la relazione <op> vale per tutti i valori)
+  - precedenti
+
+
+  es. impiegati con stipendio minimo
+  
+  SELECT CodImp
+  FROM Imp
+  WHERE Stipendio <= ALL ( SELECT Stipendio FROM Imp )
+
+
+
+
+------------------------------------------------SUBQUERY CORRELATE------------------------------------------------
+
+Il blocco esterno "passa" qualcosa come variabile al blocco interno
+Si ha quindi un esecuzione simile ad un Ciclo FOR
+
+------------------------------------------------OPERATORI
+
+  - EXISTS / NOT EXISTS  (Vero se la query "ha restituito / non ha restituito" qualcosa)
+  - precedenti
+
+
+  es. sedi con almeno un programmatore
+  SELECT Sede
+  FROM Sedi S
+  WHERE EXISTS ( SELECT * FROM Imp WHERE Ruolo = ‘Programmatore’ AND Sede = S.Sede )
+
+
+  es. Sedi in cui sono presenti tutti i ruoli == a Sedi in cui non esiste un ruolo non presente  (DIVISIONE)
+  SELECT Sede FROM Sedi S
+  WHERE NOT EXISTS ( SELECT * FROM Imp I1
+                     WHERE NOT EXISTS (SELECT * FROM Imp I2
+                                       WHERE S.Sede = I2.Sede
+                                       AND I1.Ruolo = I2.Ruolo))
+
+
+
+------------------------------------------------VISTE------------------------------------------------
+
+Posso creare una tabella fittizia che si aggiornerà in automatico con le altre chiamata VISTA.
+Con queste posso calcolare automaticamente valori come fossero variabili d'appoggio oppure nascondere parti di tabelle agli utenti ai quali non riguardano quei dati.
+
+CREATE VIEW *nome*(*attr1*, *attr2*, ...) AS (
+	*query (deve produrre lo stesso num di attributi che ho segnato sopra)*
+)
+
+WITH CHECK OPTION								
+
+
+SUCCESSIVAMENTE (query):
+
+SELECT *
+FROM *nomeVista*
+WHERE ...
+
+
+
+  es. La sede che ha il massimo numero di impiegati
+  -- con subquery
+  SELECT I.Sede
+  FROM Imp I
+  GROUP BY I.Sede
+  HAVING COUNT(*) >= ALL ( SELECT COUNT(*) FROM Imp I1 GROUP BY I1.Sede )
+
+  -- con viste
+  CREATE VIEW NumImp(Sede,Nimp) (
+    AS SELECT Sede, COUNT(*)
+    FROM Imp
+    GROUP BY Sede
+  )
+
+  SELECT Sede
+  FROM NumImp
+  WHERE Nimp = (SELECT MAX(NImp) FROM NumImp)
+
+
+
+Posso anche creare vere e proprie viste temporanee di appoggio, come fossero variabili, con la WITH.
+La vista in questione va sempre accoppiata con la query in cui la uso, e verrà eliminata a fine esecuzione.
+
+
+  es. La sede che ha il massimo numero di impiegati
+  WITH SediStip(Sede,TotStip) AS (
+    SELECT Sede,SUM(Stipendio)
+    FROM Imp
+    GROUP BY Sede
+  )
+  SELECT Sede
+  FROM SediStip
+  WHERE TotStip = (SELECT MAX(NImp) FROM NumImp)
+
+
+
+
+
+
+
+
+
+
+
+
+
+

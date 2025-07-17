@@ -1,0 +1,376 @@
+LIBRERIE DI SISTEMI INFORMATIVI-T
+Achille Pisani
+
+
+In questo file sono presenti degli esempi di soluzioni di query fornite dal professore con rispettivo testo, 
+sono divise per tipologia di esercizio (2.1 o 2.2) e per tipologia di comandi utilizzati.
+
+
+
+
+
+(*2.1*)
+
+Per ogni cliente, le pizze che ha ordinato almeno 2 volte di seguito (ossia in ordini consecutivi)|
+
+SELECT O2.CLIENTE, D2.NOME 
+FROM ORDINI o, ORDINI o2, DETTAGLI D, DETTAGLI D2
+WHERE O.OID <> O2.OID 
+AND O.CLIENTE = O2.CLIENTE 
+AND O.DATA < O2.DATA
+AND NOT EXISTS (SELECT * FROM ORDINI O3 WHERE O3.OID = O.OID AND O3.DATA < O2.DATA AND O3.DATA > O.DATA)
+AND D.OID = O.OID AND D2.OID = O2.OID 
+AND D.NOME = D2.NOME
+GROUP BY O2.CLIENTE, D2.NOME 
+
+Le partite in cui almeno 2 giocatori hanno preso un voto maggiore di 7 e ognuno ha totalizzato
+complessivamente almeno 20 punti
+
+WITH TOT_PUNTI (Partita, IDG) AS (
+SELECT P.Partita, P.IDG
+ FROM PUNTI P
+ GROUP BY P.Partita, P.IDG
+HAVING SUM(P.PuntiSet) >= 20 )
+SELECT T.Partita
+FROM TOT_PUNTI T, VALUTAZIONI V
+WHERE (T.IDG,T.Partita) = (V.IDG,V.Partita)
+AND V.Voto > 7
+GROUP BY T.Partita
+HAVING COUNT(*) >= 2 
+
+
+(UNION)
+Per ogni corridore, il numero, il nome, i punti totali (0 se non ha punti) e la miglior posizione
+ottenuta, ordinando per valori decrescenti dei primi e, a parità, per valori crescenti della seconda*/
+
+SELECT C.NUM, C.NOME, SUM(P.PUNTI), MIN(A.POS)
+FROM CORRIDORI c, PUNTI p, ARRIVI a 
+WHERE A.NUMCORRIDORE = C.NUM 
+AND (P.POS = A.POS)
+GROUP BY C.NUM, C.NOME 
+UNION
+SELECT C.NUM, C.NOME, 0, min(A.POS)
+FROM CORRIDORI c, ARRIVI a 
+WHERE A.NUMCORRIDORE = C.NUM
+AND (C.NUM, C.NOME) NOT IN (SELECT C.NUM, C.NOME
+	FROM CORRIDORI c, PUNTI p, ARRIVI a 
+	WHERE A.NUMCORRIDORE = C.NUM 
+	AND P.POS = A.POS
+	GROUP BY C.NUM, C.NOME )
+GROUP BY C.NUM, C.NOME
+ORDER BY 3 DESC, 4 ASC
+
+ -- OPPURE --
+
+SELECT C.Num, C.Nome, COALESCE(SUM(P.Punti),0) AS PuntiTotali, MIN(A.Pos) AS MigliorPosizione
+FROM ARRIVI A LEFT JOIN PUNTI P ON (A.POS = P.POS)
+JOIN CORRIDORI C ON (A.NumCorridore = C.Num)
+GROUP BY C.Num, C.Nome
+ORDER BY PuntiTotali DESC, MigliorPosizione;
+-- L’outer join serve per poter inserire nel risultato anche chi non
+-- ha mai ottenuto punti. Per tali corridori SUM(P.Punti) è NULL,
+-- e la funzione COALESCE restituisce il valore 0, come richiesto
+
+|2.1)I codici dei prodotti il cui prezzo è sempre almeno il 50% del prezzo di ogni pacchetto
+|in cui sono inclusi (non vanno considerati eventuali prodotti non inclusi in nessun pacchetto)*/
+
+SELECT DISTINCT P.CODP
+FROM PRODOTTI P, PACCHETTI p2,COMPOSIZIONI c 
+WHERE C.PID = P2.PID AND C.CODP = P.CODP 
+AND P.PREZZO > 0.5*P2.PREZZO
+AND P.CODP NOT IN (SELECT DISTINCT P.CODP
+FROM PRODOTTI P, PACCHETTI p2,COMPOSIZIONI c 
+WHERE C.PID = P2.PID AND C.CODP = P.CODP
+AND P.PREZZO <= 0.5*P2.PREZZO )
+
+OPPURE
+
+SELECT DISTINCT P.CODP
+FROM PRODOTTI P, PACCHETTI p2,COMPOSIZIONI c 
+WHERE C.PID = P2.PID AND C.CODP = P.CODP 
+AND P.PREZZO > 0.5*P2.PREZZO
+EXCEPT 
+SELECT DISTINCT P.CODP
+FROM PRODOTTI P, PACCHETTI p2,COMPOSIZIONI c 
+WHERE C.PID = P2.PID AND C.CODP = P.CODP
+AND P.PREZZO <= 0.5*P2.PREZZO 
+
+
+|Per ogni giorno, la media degli incassi considerando solo i prodotti venduti, in quel giorno, in
+|più di una filiale
+
+SELECT I.Data, CAST(AVG(I.Importo) AS DEC(6,2)) AS MediaIncassi
+FROM INCASSI I
+WHERE EXISTS ( SELECT *
+ FROM INCASSI I1
+ WHERE I1.Data = I.Data
+ AND I1.CodP = I.CodP
+ AND I1.CodF <> I.CodF )
+GROUP BY I.Data
+-- La subquery verifica che, in una stessa data, più di una filiale
+-- abbia venduto un dato prodotto
+
+
+|Per ogni acquisto non ancora completamente pagato, ma per cui sono state pagate almeno 2 rate,
+|la percentuale pagata rispetto all’importo dell’acquisto
+
+SELECT A.IDA, 100*SUM(R.IMPORTORATA)/A.IMPORTO || '%' AS PERC_PAGATA
+FROM ACQUISTI A, RATE R
+WHERE A.IDA = R.IDA
+ AND R.PAGATAIL IS NOT NULL
+AND EXISTS (SELECT *
+ FROM RATE R
+ WHERE R.IDA = A.IDA
+ AND R.PAGATAIL IS NULL )
+GROUP BY A.IDA, A.IMPORTO
+HAVING COUNT(*) >=2 ; 
+
+|Per ogni comune, la dimensione media dei propri terreni, escludendo quelli di
+|dimensione minore di 500 metri quadri e quelli con singolo proprietario*/
+
+SELECT T.COMUNE, DEC(AVG(T.METRIQUADRI*1.0),6,2) AS MEDIA
+FROM TERRENI T
+WHERE T.IDT NOT IN (SELECT T.IDT FROM TERRENI T WHERE T.METRIQUADRI<500)
+AND T.IDT NOT IN (SELECT T.IDT 
+	FROM TERRENI t, PROPRIETA p 
+	WHERE  T.IDT = P.IDT 
+	AND P.QUOTA = 100)	
+GROUP BY T.COMUNE 
+
+|I nomi dei dentisti con almeno 5 anni di servizio che hanno eseguito cure di tipo 'pulizia
+|canalare' con 3 o più sedute nel 2024, tutte relative a uno stesso preventivo*/
+
+SELECT D.NOME 
+FROM DENTISTI d 
+WHERE D.ANNISERVIZIO >= 5
+AND D.DID IN (SELECT  S.DID
+	FROM SEDUTE s, PREVENTIVI p 
+	WHERE S.PID = P.PID 
+	AND P.DESCRIZIONE LIKE '%pulizia canalare%'
+	AND YEAR(S."DATA") = 2024
+	GROUP BY S.PID, S.DID 
+	HAVING COUNT(*) >= 3)
+
+[ESAME SCORSO]:
+|I dettagli di ogni prodotto per il quale la quantità complessivamente venduta a prezzo non
+|scontato è maggiore di 5, e il valore di tale quantità*/
+
+SELECT V.CODP,P.CATEGORIA, P.PREZZO, SUM(V.QUANTITA)
+FROM VENDITE V, PRODOTTI p 
+WHERE (v.CODP, v.data) NOT IN (
+	SELECT V.CODP, v."DATA" 
+	FROM VENDITE v, SCONTI s 
+	WHERE V."DATA" BETWEEN S.INIZIO AND S.FINE
+	GROUP BY V.CODP, v."DATA")
+AND P.CODP = V.CODP 
+GROUP BY V.CODP, P.CATEGORIA, P.PREZZO  
+HAVING SUM(V.QUANTITA) > 5
+
+
+|Per ogni prodotto, il numero massimo di giorni in cui il prezzo non è variato
+|(per semplicità si ignori il periodo che include la data attuale)*/
+
+SELECT L.PRODID, MAX(DAYS(L2.DATA) - DAYS(L.DATA) ) AS DIFFMAX
+FROM LISTINO l, LISTINO l2 
+WHERE L.PRODID = L2.PRODID 
+AND L.DATA < L2.DATA 
+AND L.NUM = L2.NUM -1
+GROUP BY L.PRODID
+
+|Per ogni acquisto non ancora completamente pagato, ma per cui sono state pagate almeno 2 rate,
+|la percentuale pagata rispetto all’importo dell’acquisto
+SELECT A.IDA, 100*SUM(R.IMPORTORATA)/A.IMPORTO || '%' AS PERC_PAGATA
+FROM ACQUISTI A, RATE R
+WHERE A.IDA = R.IDA
+ AND R.PAGATAIL IS NOT NULL
+AND EXISTS (SELECT *
+ FROM RATE R
+ WHERE R.IDA = A.IDA
+ AND R.PAGATAIL IS NULL )
+GROUP BY A.IDA, A.IMPORTO
+HAVING COUNT(*) >=2 ; 
+
+------------------------------------------------------------------
+[*2.2*]
+
+[EXCEPT] 
+|Le coppie di clienti che, ogni volta che hanno fatto un ordine lo stesso giorno, hanno sempre
+|preso lo stesso numero totale di pizze
+
+WITH TOTPIZZE(CLIENTE,DATA,TOTALE) AS (
+SELECT O.CLIENTE, O."DATA", SUM(D.QTA)
+FROM ORDINI o, DETTAGLI d 
+WHERE O.OID = D.OID 
+GROUP BY O.CLIENTE, O."DATA")
+SELECT T.CLIENTE, T2.CLIENTE
+FROM TOTPIZZE T, TOTPIZZE T2
+WHERE T.DATA = T2.DATA AND T.CLIENTE < T2.CLIENTE
+EXCEPT 
+SELECT T.CLIENTE, T2.CLIENTE
+FROM TOTPIZZE T, TOTPIZZE T2
+WHERE T.DATA = T2.DATA AND T.CLIENTE < T2.CLIENTE
+AND T.TOTALE <> T2.TOTALE
+
+
+|Per ogni partita, i giocatori che, escludendo gli eventuali set non giocati, hanno sempre
+|incrementato i punti da un set all’altro 
+
+WITH PUNTEGGI(PARTITA,ID,PUNTI1,PUNTI2) AS(
+SELECT P.PARTITA, P.IDG, P.PUNTISET, P2.PUNTISET 
+FROM PUNTI p, PUNTI p2 
+WHERE P2.PARTITA = P.PARTITA
+AND P2.IDG = P.IDG
+AND P.SET = P2.SET -1
+GROUP BY P.PARTITA, P.IDG, P.PUNTISET, P2.PUNTISET)
+SELECT PARTITA, ID
+FROM PUNTEGGI
+EXCEPT 
+SELECT PARTITA, ID
+FROM PUNTEGGI
+WHERE PUNTI1 > PUNTI2
+
+
+|Considerando solo le prime 3 posizioni in ogni tappa, i dati del corridore che ha dato il
+|maggior distacco di tempo al successivo*/
+
+WITH DATI(TAPPA,NUM1,NUM2,POS1,POS2,DISTACCO) AS(
+SELECT A.TAPPA, A.NUMCORRIDORE, A2.NUMCORRIDORE, A.POS, A2.POS, A2.TEMPO - A.TEMPO 
+FROM PUNTI p, PUNTI p2, ARRIVI a, ARRIVI a2 
+WHERE P.POS = P2.POS -1
+AND A2.POS = P2.POS AND A.POS = P.POS
+AND A.TAPPA = A2.TAPPA )
+SELECT C.NUM, C.NOME,C.SQUADRA,D.DISTACCO
+FROM DATI D, CORRIDORI c 
+WHERE C.NUM = D.NUM1
+AND D.DISTACCO >= ALL (SELECT DISTACCO FROM DATI)
+
+|Il pacchetto, con relativo prezzo, per cui il risparmio percentuale, calcolato rispetto
+|all’acquisto dei prodotti che lo compongono, è massimo */
+
+WITH PERCENTUALI(PID,PREZZO, PERC) AS (
+SELECT P.PID,P.PREZZO,(100 - (SUM(C.NUMPEZZI*1.0*P2.PREZZO)*100)/P.PREZZO) 
+FROM PACCHETTI p, PRODOTTI p2, COMPOSIZIONI c 
+WHERE C.PID = P.PID AND P2.CODP = C.CODP 
+GROUP BY P.PID, P.PREZZO)
+SELECT PID, PREZZO, PERC || '%'
+FROM PERCENTUALI
+WHERE PERC >= ALL(SELECT PERC FROM PERCENTUALI)
+
+
+
+|Per ogni reparto, le filiali che hanno complessivamente incassato più della media degli incassi
+|complessivi, per lo stesso reparto, delle altre
+WITH INCASSI_REP(Reparto,CodF,TotImporto) AS (
+ SELECT P.Reparto, I.CodF, SUM(I.Importo)
+ FROM PRODOTTI P, INCASSI I
+ WHERE P.CodP = I.CodP
+ GROUP BY I.CodF, P.Reparto )
+SELECT I.*
+FROM INCASSI_REP I
+WHERE I.TotImporto > ( SELECT AVG(I1.TotImporto)
+ FROM INCASSI_REP I1
+ WHERE I1.Reparto = I.Reparto
+ AND I1.CodF <> I.CodF )
+
+|Per ogni cliente che ha pagato almeno 2 rate in tutti gli acquisti fatti, l’identificativo
+|dell’acquisto in cui l’importo totale delle rate pagate è massimo*/
+
+WITH ALMENO2RATE(CLIENTE, IDA, IMPORTOTOT) AS (
+SELECT A.CLIENTE, A.IDA, SUM(R.IMPORTORATA)
+FROM ACQUISTI a, RATE r 
+WHERE A.IDA = R.IDA  
+AND r.PAGATAIL IS NOT NULL
+AND a.cliente NOT IN (SELECT a.cliente
+	FROM ACQUISTI a, RATE R 
+	WHERE A.IDA = R.IDA 
+	GROUP BY a.IDA, a.CLIENTE 
+	HAVING count(*) < 2)
+GROUP BY A.CLIENTE, A.IDA  
+HAVING count(*) >= 2 )
+SELECT CLIENTE, IDA, IMPORTOTOT
+FROM ALMENO2RATE
+WHERE IMPORTOTOT >= ALL(SELECT importotot FROM ALMENO2RATE )
+
+|Per ogni proprietario, il comune in cui possiede più terreni diversi (indipendentemente
+|dalla quota e dai metri quadri posseduti)
+
+WITH OK(CF,COMUNE,NUMERO) AS(
+SELECT P.CF,T.COMUNE, COUNT(*)
+FROM PROPRIETA p, TERRENI T
+WHERE EXISTS ( SELECT * FROM PROPRIETA P2 WHERE P.CF = P2.CF AND P.IDT <> P2.IDT)
+AND P.IDT = T.IDT
+GROUP BY P.CF, T.COMUNE)
+SELECT CF, COMUNE,NUMERO
+FROM OK OKK
+WHERE NUMERO >= (SELECT MAX(NUMERO) FROM OK OK1 WHERE OK1.CF = OKK.CF )
+
+
+[DISTINCT COUNT]
+
+|Per ogni preventivo completamente pagato e in cui tutte le sedute (almeno 2) sono state
+|con uno stesso dentista, il numero di giorni trascorsi tra la prima e l'ultima seduta
+
+SELECT P.PID, DAYS(MAX(S.DATA)) - DAYS(MIN(S.DATA)) AS NGiorni
+FROM PREVENTIVI P, SEDUTE S
+WHERE P.PID = S.PID
+AND P.Importo = P.Pagato
+GROUP BY P.PID
+HAVING COUNT(*) >= 2 AND COUNT(DISTINCT S.DID) = 1
+
+[ESAME SCORSO]:
+Per ogni categoria, il prodotto che ha complessivamente incassato di più nei periodi di
+sconto, con il relativo incasso*/
+
+WITH INCASSI(CAT,COD,INC) AS(
+SELECT P.CATEGORIA,P.CODP, SUM((V.QUANTITA*P.PREZZO) - (((V.QUANTITA*P.PREZZO)*S.SCONTO)/100.0))
+FROM PRODOTTI p, VENDITE v, SCONTI s 
+WHERE P.CODP = V.CODP
+AND V."DATA" BETWEEN S.INIZIO AND S.FINE 
+GROUP BY P.CATEGORIA, P.CODP)
+SELECT  I1.CAT, I1.COD, I1.INC
+FROM INCASSI I1
+WHERE I1.INC >= ALL (SELECT I2. INC FROM INCASSI I2 WHERE I2.CAT = I1.CAT)
+ 
+
+[UNION]
+
+Il prodotto che ha complessivamente incassato di più*/
+WITH INCASSI(PROD,VALORE) AS(
+SELECT L.PRODID, SUM(A.QTA*L.PREZZO)
+FROM LISTINO l, ACQUISTI a, LISTINO l2 
+WHERE A.PRODID = L.PRODID AND L.PRODID = L2.PRODID 
+AND (L2.NUM = L.NUM + 1) 
+AND A.DATA >= L.DATA 
+GROUP BY L.PRODID
+UNION
+SELECT L.PRODID, SUM(L.PREZZO * A.QTA)
+FROM LISTINO l, ACQUISTI a 
+WHERE L.PRODID = A.PRODID 
+GROUP BY L.PRODID 
+HAVING COUNT(*) = 1 )
+SELECT PROD, VALORE
+FROM INCASSI
+WHERE VALORE >= ALL(SELECT VALORE FROM INCASSI )
+
+
+|Per ogni cliente che ha pagato almeno 2 rate in tutti gli acquisti fatti, l’identificativo dell’acquisto
+|in cui l’importo totale delle rate pagate è massimo
+
+WITH TOTALI(CLIENTE,IDA,TOT_PAGATO) AS
+(SELECT A.CLIENTE, A.IDA, SUM(R.IMPORTORATA)
+FROM ACQUISTI A, RATE R
+WHERE A.IDA = R.IDA
+AND R.PAGATAIL IS NOT NULL
+AND A.CLIENTE NOT IN
+ (SELECT DISTINCT A.CLIENTE -- clienti da escludere
+ FROM ACQUISTI A, RATE R
+ WHERE A.IDA = R.IDA
+ GROUP BY A.IDA, A.CLIENTE
+ HAVING COUNT(R.PAGATAIL) < 2)
+GROUP BY A.CLIENTE, A.IDA
+)
+SELECT *
+FROM TOTALI T1
+WHERE T1.TOT_PAGATO = ( SELECT MAX(T2.TOT_PAGATO)
+FROM TOTALI T2
+WHERE T2.CLIENTE = T1.CLIENTE) ;

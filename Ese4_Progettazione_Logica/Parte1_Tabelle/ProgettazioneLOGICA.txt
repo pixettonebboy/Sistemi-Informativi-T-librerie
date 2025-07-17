@@ -1,0 +1,200 @@
+OBIETTIVO: passare dallo schema concettuale a uno schema logico che lo rappresenti fedelmente (efficiente).
+
+DBrel = Schema relazionale
+DBconc = E/R = Schema concettuale
+Sat(DB) = insieme delle istanze legali dello schema
+dbconc = istanza legale di DBconc
+
+DBrel fedele = permette di rappresentare esattamente le stesse informazioni del DBconc
+		(i due schemi sono equivalenti dal punto di vista della loro capacità informativa)
+		e cioè hanno lo stesso insieme delle istanze legali.
+
+
+DBrel = DBconc <--> Sat(DBrel) = Sat(DBconc)
+ 
+La progettazione logica può essere vista come la definizione di un mapping M che ci dice come trasformare ogni
+	istanza legale dbconc di DBconc in una corrispondente istanza dbrel di DBrel.
+
+Viene PRESERVATA L'INFORMAZIONE se M è TOTALE e INIETTIVA.
+
+TOTALE = per ogni dbconc di DBconc esiste un dbrel di DBrel tale che M(dbconc) = dbrel
+INIETTIVA = non esistono due istanze db1conc e db2conc tali che M(db1conc) = M(db2conc)
+
+Inoltre: per ogni istanza dbrel di DBrel esiste un'isatanza dbconc di DBConc tale che M(dbconc) = dbrel
+Si ha quindi una BIIEZIONE tra gli insiemi di istanze legali.
+--------------------------------
+
+SCHEMA RELAZIONALE SEMPLICE
+
+ENTITà NORMALI:
+	CHIAVE PRIMARIA = IDENTIFICATORE (INTERNO)
+	ATTRIBUTO OPZIONALE = USO * PER INDICARE LA POSSIBILITà DI VALORI NULLI
+	IDENTIFICATORE ESTERNO = CHIAVE PRIMARIA DELL'ATTRIBUTO + CHIAVE PRIMARIA DELL'ENTITA' IDENTIFICANTE (importata)
+
+ATTRIBUTI COMPOSTI: Vanno divisi in attributi singoli con uno stesso prefisso.
+		    se la cardinalità minima è 0 (è opzionale) allora è possibile che sia NULL
+
+ASSOCIAZIONE = viene tradotta con una relazione con gli stessi attributi e vengono aggiunte le chiave primarie
+		delle entità che collega
+		IDENTIFICATORI DELLE ENTITà = costituiscono una SUPERCHIAVE (sono chiavi esterne)
+		CHIAVE PRIMARIA = dipende dalle CARDINALITà MASSIME delle entità nell'associazione.
+		1) N - N :
+			CHIAVE PRIMARIA = UNIONE IDENTIFICATORI DELLE ENTITA' COLLEGATE
+		2) 1 - N :
+			CHIAVE PRIMARIA = IDENTIFICATORE DELL'ENTITA' CHE PARTECIPA CON CARDINALITA' MASSIMA 1
+		3) 1 - 1 :
+			CHIAVE PRIMARIA = E' UNO DEI DUE IDENTIFICATORI, L'ALTRO DIVENTA UNA CHIAVE ALTERNATIVA(unique)
+			(dipende dall'importanza relativa delle chiavi).
+ALTERNATIVE: 
+2.1) 1 - N : 
+	     L'ENTITA' CON CARDINALITA' 1 INGLOBA L'ASSOCIAZIONE 
+3.1) 1 - 1 :
+	     L'ENTITA' CON CARDINALITA' 1 INGLOBA L'ASSOCIAZIONE  (quella con chiave più importante)
+(Se la cardinalità minima è 0 allora non è una buona scelta inglobare in quell'entità, si devono rendere possibilmente nulli 
+i valori dell'entità)
+
+{
+[ASSOCIAZIONI 1-1]
+ Se min-card(E1, R) = min-card(E2, R) = 1 si avranno 2 chiavi senza valori nulli (la primaria è la più importante
+ Se min-card(E1, R) = 0 e min-card(E2, R) = 1 la chiave derivante da E2 ammette valori nulli e la chiave primaria si ottiene da E1
+ Se min-card... = min-card... = 0 entrambe le chiavi ammettono NULL e si rende necessario introdurre un codice.
+}
+
+SCELTA CHIAVE PRIMARIA = Vengono utilizzati tre criteri:
+	1) assenza di opzionalità (valori NULL)
+	2) semplicità
+	3) utilizzo nelle operazioni più frequenti o importanti
+
+
+---------------------
+GERARCHIE: Non possono essere rappresentate nello schema relazionale, si hanno tre possibilità:
+	1) ACCORPARE LE FIGLIE NEL GENITORE (vengono aggiunti gli attributi delle FIGLIE (0,1) in più e l'attributo "TIPO")
+		COLLASSO VERSO L'ALTO
+{ATTRIBUTO TIPO: 
+1)TOTALE ESCLUSIVA: TIPO ha N valori, quante sono le FIGLIE.
+2)PARZIALE ESCLUSIVA: TIPOha N+1 valori, il valore in più serve per le istanze che non sono presenti fra le FIGLIE
+3)SOVRAPPOSTA: occorrono tanti selettori tante quante sono le figlie, ciascuno a valore BOOLEANO.
+		(se è parziale i selettori possono essere tutti falsi, oppure si può aggiungere un selettore)
+
+	2) ACCORPARE IL GENITORE NELLE FIGLIE (vengono aggiunti gli attributi della MADRE in entrambe le FIGLIE)
+		COLLASSO VERSO IL BASSO - SOLO SE TOTALI ED ESCLUSIVE 
+
+	3) SOSTITUIRE LA GENERALIZZAZIONE CON ASSOCIAZIONI ( card_figlia(1,1), card_gen(0,1), 
+					viene aggiunto l'attributo "TIPO" al genitore,
+					le figlie hanno come FK la chiave del genitore)
+		TRADUZIONE INDIPENDENTE
+
+
+--------------------------------------
+CRITERI DI OTTIMIZZAZIONE
+
+In un DB bisogna conoscere i volumi dei dati e le principali operazioni.
+
+TAVOLA DEI VOLUMI: tabella in cui si riportano CONCETTO, TIPO, VOLUME
+	CONCETTO = NOME ENTITA'
+	TIPO = E (ENTITA') R (ASSOCIAZIONE)
+	VOLUME = Carico di dati, in caso con * si indica che dipende dalle cardinalità
+
+
+SCHEMA DI NAVIGAZIONE = parte dello schema E/R interessata dall'operazione, estesa con delle frecceche indicano
+			in che modo l'operazione naviga i dati 
+
+TAVOLA DEGLI ACCESSI: tabella in cui si riportano CONCETTO, TIPO, ACCESSI, OP:
+		ACCESSI = si ottiene dalla TAB. DEI VOLUMI (rapporto tra volume associazione e volume entità prima)
+		OP = L (lettura) S (scrittura)
+
+RIDONDANZA = informazione significativa ma derivabile da altre
+	ottenuta mediante ATTTRIBUTI DERIVABILI DA ALTRI ATTR., ASSOCIAZIONI DERIVABILI DALLA COMP DI ALTRE ASS.
+
+----------------------------------
+P = TOTALE ED ESCLUSIVA
+	VINCOLO SUI SELETTORI: EXACTLY ONE
+	(collasso verso il basso)
+
+T = TOTALE E SOVRAPPOSTA
+	VINCOLO SUI SELETTORI: AT LEAST ONE
+
+D = PARZIALE E ESCLUSIVA
+	VINCOLO SUI SELETTORI: EXCLUSIVE
+
+TRIANGOLO = PARZIALE E SOVRAPPOSTA
+---------------------------------
+
+VINCOLI DI GERARCHIA COLLASSATA IN ALTO:
+(PARZIALE SOVRAPPOSTA)
+
+Se ho 
+MADRE SUPREMA E1 
+FIGLIA MEDIA E2
+FIGLIA INFERIORE E3
+
+devo "studiare" tutto ciò che riguarda E2 e E3 nel caso in cui TIPO = 1, 2, 3
+TIPO = 1 allora tutto cio che riguarda E2 e E3 deve essere NULL
+TIPO = 2 allora tutto cio che riguarda E2 è NOT NULL e E3 è NULL
+TIPO = 3 allora tutto è NOT NULL
+---------------------------------------
+
+VINCOLI DI GERARCHIA COLLASSATA IN BASSO (TOTALE E SOVRAPPOSTA)
+E2 ed E3 FIGLIE
+E1 MADRE
+
+(ho un'associazione tra E2 e E1 con attributo D)
+
+CONSTRAINT MAX_CARD_R1 CHECK (K1R1E2 = K1R1E3),
+-- se entrambe non nulle devono referenziare una stessa istanza, se una è nulla il CHECK non è violato
+CONSTRAINT R1_D CHECK ((K1R1E2 IS NULL AND K1R1E3 IS NULL AND D IS NULL) OR
+ ((K1R1E2 IS NOT NULL OR K1R1E3 IS NOT NULL) AND D IS NOT NULL)) )
+
+
+------------------------------------
+
+VINCOLI DI GERARCHIA COLLASSATA IN ALTO (TOTALE E ESCLUSIVA - P) 
+E1 MADRE   (K1 e A attributi di E1)
+E2 E3 FIGLIE (B e C attributi delle figlie)
+
+CONSTRAINT E2E3 CHECK ((TIPO23 = 2 AND B IS NOT NULL AND C IS NULL) OR
+ (TIPO23 = 3 AND B IS NULL AND C IS NOT NULL)
+--------------------------------------
+
+VINCOLI DI GERARCHIA COLLASSATA IN ALTO (PARZIALE E SOVRAPPOSTA - TRIANGOLO)
+ E1 MADRE 
+ E2 FIGLIA (ha B come attributo)
+TIPO IN (1,2)
+CHECK((TIPO = 1 AND B IS NULL) OR (TIPO = 2 AND B IS NOT NULL)))
+
+IMPORTANTE: Se ho un'associazione sia con E2 che con E1 devo verificare che se TIPO = 1 allora
+la chiave esterna K1R2 deve referenziare un'istanza di E2
+
+ -- Trigger che garantisce che R2 referenzi un’istanza di E2
+CREATE TRIGGER R2_E2
+BEFORE INSERT ON E3
+REFERENCING NEW AS N
+FOR EACH ROW
+WHEN ( NOT EXISTS ( SELECT *
+ FROM E1
+ WHERE N.K1R2 = E1.K1
+ AND E1.TIPO2 = 2 ) )
+
+-------------------------
+IMPORTANTE:
+Se ho una chiave con la cardinalità dell'associazione  E3 1 - N E2
+es: E3 è legata ad E1 tramite R2
+ho id : R2.E1.C    (con C attributo dell'entità E3)
+Allora la PRIMARY KEY(K1R2, C) di E3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		

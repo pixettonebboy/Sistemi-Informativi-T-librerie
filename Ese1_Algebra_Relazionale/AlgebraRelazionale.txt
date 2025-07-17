@@ -1,0 +1,94 @@
+LIBRERIE DI SISTEMI INFORMATIVI-T
+Achille Pisani
+
+Per quanto riguarda l'algebra, essendo su carta è alquanto inutile fare delle librerie, tuttavia, per imparare in fretta anche da zero a fare gli esercizi di algebra, questa pagina notion che trovai tempo fa sui gruppi è veramente fatta bene.
+
+https://www.notion.so/algebra-relazionale-ebd5ddf92d5d4609b8bc4dd73e6a8ce0
+
+
+
+
+
+DI SEGUITO UN BREVE RECAP DI TUTTE LE NOZIONI TEORICHE PIU' IMPORTANTI:
+
+
+
+
+
+INSIEME DI OPERATORI CHE SI APPLICANO A UNA O PIU RELAZIONI E PRODUCONO UNA RELAZIONE
+
+UNARI: Selezione, Proiezione, Ridenominazione
+BINARI: Join (naturale), unione, differenza
+
+
+-----------
+
+|SELEZIONE: permette di selezionare un sottoinsieme delle tuple di una relazione
+(sigma)
+
+es.  sigma(Voto = 30) AND (Lode = 'NO') (ESAMI) --> nome schema
+prende solo le tuple con voto = 30 e LODE = NO
+
+-----------
+
+|PROIEZIONE: permette di selezionare un sottoinsieme degli attributi di una relazione
+(pigreco)
+
+es. pigreco(CodCorso, Docente) (CORSI) 
+prende tutte le tuple riguardanti gli attributi CodCorso e Docente (senza ripetizioni)
+
+la cardinalità è minore o uguale a quella di r (elimina i duplicati)
+
+----------
+
+|JOIN (naturale): combina le tuple di due relazioni sulla base dell'uguaglianza dei valori degli attributi 
+		comuni alle due relazioni
+
+TUPLA DANGLING: se una tupla non fa match con nessuna tupla dell'altra relazione
+la cardinalità è compresa tra 0 e |r1| * |r2|
+
+---------
+
+|INTERSEZIONE: se X1 = X2 (schemi uguali) allora il JOIN equivale all'intersezione
+può anche essere scritta come r1 - (r1 - r2)
+
+|PRODOTTO CARTESIANO: se X1 e X2 non hanno attributi in comune il JOIN equivale ad un PRODOTTO CARTESIANO
+
+|UNIONE E DIFFERENZA: si applicano a relazioni con lo stesso insieme di attributi
+----------
+
+|RIDENOMINAZIONE: permette di modificare il nome di un attributo (in modo da poter fare JOIN o altre operazioni)
+( rhoY<--X (R) )
+----------
+
+|SELF JOIN: tramite la RIDENOMINAZIONE è possibile effettuare la JOIN di una relazione con se stessa.
+
+es. data la relazione con attributi GENITORE e FIGLIO, si crea la relazione NONNO e GENITORE ridenominando
+NONNO <-- GENITORE,  GENITORE<-- FIGLIO e si fa la join
+
+
+---------
+
+|DIVISIONE : date due relazioni con attributi in comune, vengono presi i valori degli attributi NON 
+in comune, in comune  (ATTRIBUTI non in comune | VALORI in comune)
+---------
+
+|THETA JOIN: è la combinazione fra PR. CARTERSIANO e SELEZIONE
+r1 |> <|F r2 = sigma(r1 |> <| r2)
+
+----------
+
+CASO DEI NULL:
+
+PROIEZIONE, DIFFERENZA E UNIONE NON CAMBIANO
+
+SELEZIONE NECESSITA DI "IS NULL" O "IS NOT NULL"
+
+JOIN: NON VENGONO CONSIDERATI IN COMUNE DUE "NULL"
+
+----------
+LEFT JOIN = le TUPLE DANGLING dell'operando sinistro sono riempite con NULL
+
+RIGHT JOIN = le TUPLE DANGLING dell'operando destro sono riempite con NULL
+
+FULL = si riempioono con NULL le TUPLE DANGLING di entrambi gli operandi

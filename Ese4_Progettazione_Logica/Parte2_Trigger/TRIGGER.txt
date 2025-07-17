@@ -1,0 +1,190 @@
+LIBRERIE DI SISTEMI INFORMATIVI-T
+Achille Pisani
+
+I trigger vengono tipicamente usati per gestire vincoli di integrità, calcolare dati derivati, gestire eccezioni.
+
+
+------------------------------------------------SINTASSI (base) DI UN TRIGGER------------------------------------------------
+
+
+   CREATE OR REPLACE *nomeTrigger*								
+   (opzionale) NO CASCADE BEFORE INSERT ON *tabella*   						(si mette molto spesso per evitare cascade dei trigger)
+
+												
+   *BEFORE/AFTER* *INSERT/UPDATE/DELETE* OF *attributo_della_tabella* ON *tabella*		QUANDO SI ATTIVA IL TRIGGER (dopo che evento)
+												 before --> si usa per condizionare l'esito dell'operazione, che potrei anche bloccare
+												 after  --> agisco sulle conseguenze dei cambiamenti che ho già applicato
+
+   REFERENCING *NEW / OLD / NEW_TABLE / OLD_TABLE* AS *nome*     				Stato del dato/tabella su cui si sta agendo, prima/dopo dell'azione eseguita
+												OLD e OLD_TABLE non hanno senso con INSERT        NEW e NEW_TABLE non hanno senso con DELETE
+
+   *FOR EACH ROW / FOR EACH STATEMENT*                                          		AGIRE SULLE SINGOLE RIGHE/SU GRUPPO
+
+												
+   WHEN *subquery condizione*   	                                 		        Condiziona l'esecuzione dell'azione
+
+
+   SIGNAL SQLSTATE '*codiceEccezione* (*testo eccezione*)					Annullo effetti dati dal trigger e mando segnale di errore
+
+   SELECT, INSERT, DELETE, UPDATE								AGISCO SULLE TABELLE DA MODIFICARE
+
+
+ALTERNATIVA:
+
+   IF *subquery condizione*									
+   THEN *conseguenza 1*;
+   ELSE *conseguenza 2*;
+   END IF
+
+
+
+
+
+
+
+
+------------------------------------------------ESERCIZI TRIGGER SVOLTI:------------------------------------------------
+
+UPDATE CLIENTI
+SET TotFatture = 1200  -- Imposta un valore maggiore di 1000
+WHERE CF = 'PSNCL2' AND Premium = 'NO';
+
+
+
+
+DBSM ATTIVO: è un DBMS che dispone di un sottosistema integrato per definire e gestire le REGOLE
+TRIGGER: sono un caso specifico di regole di tipo ECA
+ECA: Evento, Condizione, Azione
+----------
+es. 
+CREATE TRIGGER EmpSalaryTooHigh
+AFTER UPDATE OF Salary ON Employee -- evento
+REFERENCING NEW AS N OLD AS O
+FOR EACH ROW
+WHEN (N.Salary > (SELECT Salary FROM Employee -- condizione
+WHERE EmpCode = N.EmpManager))
+UPDATE Employee -- azione
+SET Salary = O.Salary
+WHERE EmpCode = N.EmpCode
+---------
+
+TARGET: fa sempre riferimento a una SINGOLA TABELLA
+EVENTO: può essere INSERT, UPDATE o DELETE
+CONDIZIONE: è un predicato BOOLEANO
+AZIONE: sequenza di una o più istruzioni SQL 
+
+---------
+Un trigger può attivarsi BEFORE o AFTER l'evento corrispondente:
+
+*BEFORE*
+I BEFORE TRIGGER vengono usati per condizionare l'esito dell'operazione oppure per bloccarla segnalando errore
+
+*AFTER*
+Gli AFTER TRIGGER servono a reagire alla modifica del DB mediante opportune azioni
+
+*FOR EACH ROW*
+Il trigger viene attivato per ognuna delle tuple coinvolte dall'evento
+
+*FOR EACH STATEMENT*
+Il trigger viene attivato solo una volta per la data istruzione 
+----------
+
+Un trigger ha spesso necessità di fare riferimento allo stato del DB prima e dopo l'evento (REFERENCING):
+
+*OLD*: valore della tupla PRIMA della modifica  (non ha senso con INSERT)
+*NEW*: valore della tupla DOPO la modifica      (non ha senso con DELETE)
+
+*OLD_TABLE*: una ipotetica table che contiene tutte le tuple modificate con i valori PRIMA della modifica
+*NEW_TABLE*: una ipotetica table che contiene tutte le tuple modificate con i valori DOPO la modifica
+
+-----------
+es. SI VUOLE EVITARE CHE LO STIPENDIO MEDIO SUPERI IL VALORE DI 1000:
+CREATE TRIGGER CheckSalariesUpdates
+AFTER UPDATE OF Salary ON Employee
+REFERENCING NEW_TABLE AS NewEmpTable
+FOR EACH STATEMENT
+WHEN ((SELECT AVG(Salary) FROM Employee) > 1000)
+UPDATE Employee
+SET Salary = 0.9*Salary
+WHERE EmpCode IN (SELECT EmpCode FROM NewEmpTable)
+-----------
+*BEFORE TRIGGER*: (SELECT, SIGNAL, SET)
+E' necessariamente un ROW TRIGGER e può usare solo NEW e OLD, non può modificare il DB (non può attivare altri trigger)
+
+es1:
+CREATE TRIGGER CheckEmpSalary
+NO CASCADE BEFORE INSERT ON Employee
+REFERENCING NEW AS NewEmp
+FOR EACH ROW
+WHEN (NewEmp.Salary > (SELECT Salary From Employee
+WHERE EmpCode = NewEmp.EmpManager))
+SIGNAL SQLSTATE ‘70000’ (‘Stipendio troppo elevato!’)
+
+es2: 
+CREATE TRIGGER EmpMinSalary
+NO CASCADE BEFORE INSERT ON Employee
+REFERENCING NEW AS NewEmp
+FOR EACH ROW
+SET NewEmp.Salary = (SELECT MIN(Salary) FROM Employee
+WHERE Dept = NewEmp.Dept),
+NewEmp.EmpManager = (SELECT MgrCode From Department
+WHERE DeptCode = NewEmp.Dept)
+
+es3: MATRICOLE STUDENTI ISCRITTI DEVONO ESSERE DIVERSE DA QUELLE DEGLI STUDENTI ERASMUS
+CREATE TRIGGER DisjointFromErasmus
+NO CASCADE BEFORE INSERT ON StudIscritti
+REFERENCING NEW AS NewStud
+FOR EACH ROW
+WHEN (EXISTS(SELECT * FROM StudErasmus E
+WHERE E.Matr = NewStud.Matr))
+SIGNAL SQLSTATE ‘70000’ (‘Matricola già presente!’)
+----------
+
+*AFTER TRIGGER*: (SELECT, INSERT, DELETE, UPDATE, SIGNAL)
+
+es1: AGGIORNA LA QUANTITA' RESIDUA DI TUTTI I PRODOTTI VENDUTI INSERITI IN UNA NUOVA FATTURA
+
+FATTURE(NumFattura__,Data,Importo)
+VENDITE(NumFattura__,CodProd__,Quantita)
+GIACENZE(CodProd__,Qtaresidua,ScortaMinima)
+
+CREATE TRIGGER UpdateQtaResidua
+AFTER INSERT ON Vendite
+REFERENCING NEW AS NuovaVendita
+FOR EACH ROW
+UPDATE Giacenze
+SET QtaResidua = Qtaresidua – NuovaVendita.Quantita
+WHERE CodProd = NuovaVendita.CodProd
+
+es2: SE LA GIACENZA DI UN PRODOTTO è MINORE DEL MINIMO PROVVEDE A INSERIRE UNA TUPLA IN CARENZE (ATT. in CASCATA)
+
+GIACENZE(CodProd__,Qtaresidua,ScortaMinima)
+CARENZE(CodProd__,QtaDaOrdinare)
+
+CREATE TRIGGER InsertQtaDaOrdinare
+AFTER UPDATE ON Giacenze
+REFERENCING NEW AS NG
+FOR EACH ROW
+WHEN (NG.QtaResidua < NG.ScortaMinima)
+INSERT INTO CARENZE
+VALUES (NG.CodProd,NG.SCortaMinima-NG.QtaResidua) 
+
+---------
+IF, THEN, ELSE, END IF
+
+es.1: O SEGNALA ERRORE OPPURE COMPLETA LA TUPLA DELL'IMPIEGATO INSERITO 
+
+CREATE TRIGGER DUEAZIONI
+NO CASCADE BEFORE INSERT ON Employee
+REFERENCING NEW AS N
+FOR EACH ROW
+IF (N.CodImp > 100) THEN
+SIGNAL SQLSTATE ‘80000’ (‘Codice invalido’);
+ELSE SET N.Salary = (SELECT MIN(Salary) FROM Employee
+WHERE Dept = N.Dept);
+END IF
+
+--------
+ELIMINARE UN TRIGGER:  DROP TRIGGER <nome_trigger>
+
+

@@ -1,0 +1,23 @@
+LIBRERIE DI SISTEMI INFORMATIVI-T
+Achille Pisani
+
+------------------------------------------------CARDINALITA':------------------------------------------------ 
+ 1 - N
+ N - N 
+ 1 - 1
+
+Se (0, N) - (0 , 1) allora id della seconda entità è chiave dell'associazione (non ci possono essere più valori ripetuti)
+
+
+------------------------------------------------GERARCHIA:------------------------------------------------
+TOTALE) Classe MADRE = Unione delle figlie
+PARZIALE) Classe MADRE CONTIENE Unione delle figlie (+ ALTRE)
+
+ESCLUSIVA)  le FIGLIE sono fra loro disgiunte
+SOVRRAPPOSTA) può esistere un'intersezione NON VUOTA fra le FIGLIE
+
+sono possibili 4 combinazioni quindi:
+ TE (identificata dal triangolo con dentro la lettera P)
+ TS (identificata dal triangolo con dentro la lettera T)
+ PE (identificata dal triangolo con dentro la lettera D)
+ PS (identificata dal triangolo vuoto)
