@@ -4,6 +4,6 @@ La maggior parte del contenuto di queste librerie è stato scritto da me, per ci
 
 ### Le librerie sono divise per esercizio (1, 2, 3 o 4)  
 dovrebbero contenere tutto ciò che è necessario a passare con tranquillità l'esame (chiaramente bisogna imparare ad usarle😄).  
-**Si consiglia di integrare con il virtuale creato dal professor Paolo Ciaccia ed, eventualmente con il link di notion citato più volte nelle librerie.**  
+**Si consiglia di integrare con il virtuale creato dal professor Paolo Ciaccia ed, eventualmente, con il link di notion citato più volte nelle librerie.**  
 
 ## 📚Buono studio!
